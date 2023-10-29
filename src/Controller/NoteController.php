@@ -19,21 +19,18 @@ class NoteController extends AbstractController
         return $this->json($noteRepository->findAll());
     }
 
-    #[Route('/{id}', name: '_get_by_id', methods: ['GET'])]
-    public function getById(Note $note): JsonResponse
-    {
-        return $this->json($note);
-    }
-
     #[Route('/', name: '_new', methods: ['POST'])]
     public function new(
-        Request $request,
+        Request                $request,
         EntityManagerInterface $em,
     ): JsonResponse
     {
         $note = new Note();
+        $data = json_decode($request->getContent(), true);
 
-        $data = $request->request->all();
+        if (!isset($data['title']) || !isset($data['body'])) {
+            throw new \Exception('Missing required fields');
+        }
 
         $note->setTitle($data['title']);
         $note->setBody($data['body']);
@@ -41,12 +38,18 @@ class NoteController extends AbstractController
         $em->persist($note);
         $em->flush();
 
-        return $this->json($note->getId());
+        return $this->json($note, 201);
+    }
+
+    #[Route('/{id}', name: '_get_by_id', methods: ['GET'])]
+    public function getById(Note $note): JsonResponse
+    {
+        return $this->json($note);
     }
 
     #[Route('/{id}', name: '_delete', methods: ['DELETE'])]
     public function delete(
-        Note $note,
+        Note                   $note,
         EntityManagerInterface $em
     ): JsonResponse
     {
@@ -58,18 +61,19 @@ class NoteController extends AbstractController
 
     #[Route('/{id}', name: '_update', methods: ['PUT'])]
     public function update(
-        Note $note,
-        Request $request,
+        Note                   $note,
+        Request                $request,
         EntityManagerInterface $em
     ): JsonResponse
     {
-        $data = $request->query->all();
+        $data = json_decode($request->getContent(), true);
 
         $note->setTitle($data['title']);
         $note->setBody($data['body']);
+        $note->setUpdatedAt(new \DateTimeImmutable());
 
         $em->flush();
 
-        return $this->json(null, 204);
+        return $this->json($note);
     }
 }
